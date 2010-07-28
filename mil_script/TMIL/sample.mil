@@ -1,0 +1,37 @@
+  print("hello, world.");
+  a = 10;
+  b = 200;
+  print(a + b * 10);
+
+  i = 0;
+  while (i < 5) {
+    print(i);
+    if (i <= 2) {
+      print("i <= 2");
+    } else {
+      print("i > 2");
+    }
+    i = i + 1;
+  }
+
+  goto *c;
+*b
+  print("b");
+  goto *d;
+*c
+  print("c");
+  goto *b;
+*d
+  print("d");
+
+  gosub *sub;
+  print("returned.");
+  goto *end;
+
+*sub
+  print("hello,");
+  print("subroutine");
+  print(10 + a * b);
+  return;
+
+*end

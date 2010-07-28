@@ -1,0 +1,43 @@
+// 修正（1）
+// 冒頭で次のプロトタイプ宣言を追加
+void parse_primary_expression();
+
+// 修正（2）
+// parse_term()内の
+// parse_int() → parse_primary_expression() に変更
+// 図7を参照
+void parse_term(){
+  char t;
+  parse_primary_expression();
+  for(;;){
+    t = get_token();
+    if(t != '*' && t != '/'){
+      e_index--; // トークンを押し戻す
+      break;
+    }
+    parse_primary_expression();
+    if(t == '*'){
+      printf("OP_MUL\n");
+    }else if(t == '/'){
+      printf("OP_DIV\n");
+    }
+  }
+}
+
+// 修正（3）
+// parse_primary_expression()を追加
+// リスト6の擬似コードをC言語にしたもの
+void parse_primary_expression(){
+  char t = get_token();
+  if(t == '('){ 
+    parse_expression();
+    t = get_token();
+    if(t != ')'){
+      printf("文法エラー 「)」がありません\n");
+      exit(-1);
+    }
+  }else{
+    e_index--; // トークンを押し戻す
+    parse_int();
+  }
+}

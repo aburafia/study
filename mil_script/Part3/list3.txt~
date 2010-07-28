@@ -1,0 +1,31 @@
+int main(int argc, char *argv[]){
+  FILE *fp;
+  Token token;
+
+  fp = fopen(argv[1], "r");
+  lex_initialize(fp);
+  
+  do{
+    token = lex_get_token();
+    if(token.kind == INT_VALUE_TOKEN){
+      printf("%d 整数\n", token.u.int_value);
+    }else if(token.kind == IDENTIFIER_TOKEN){
+      printf("%s 識別子\n", token.u.identifier);
+    }else if(token.kind == STRING_LITERAL_TOKEN){
+      printf("%s 文字列リテラル\n", token.u.string);
+    }else if(token.kind >= EQ_TOKEN 
+      && token.kind <= SEMICOLON_TOKEN){
+      printf("%s 演算子または区切り子\n", 
+        st_operator_table[token.kind - EQ_TOKEN].token);
+    }else if(token.kind != END_OF_FILE_TOKEN 
+      && token.kind >= IF_TOKEN){
+      printf("%s 予約語（キーワード）\n", 
+        st_keyword_table[token.kind - IF_TOKEN].token);
+    }
+  }while(token.kind != END_OF_FILE_TOKEN);
+
+  fclose(fp);
+
+  return 0;
+}
+

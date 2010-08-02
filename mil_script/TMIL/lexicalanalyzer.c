@@ -39,6 +39,10 @@ void lex_initialize(FILE *src_fp){
   st_current_line_number = 1;
 }
 
+/**
+*	現在組み立て中のトークンに1つ足す。
+*	'\0'はNULLで終端文字として認識されるのね。なるほど。
+*/
 static void add_letter(char *token, int letter){
   int len = strlen(token);
   token[len] = letter;

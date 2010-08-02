@@ -74,21 +74,30 @@ static OperatorInfo st_operator_table[] = {
   {";", SEMICOLON_TOKEN},
 };
 
+
 int in_operator(char *token, int letter){
   int op_idx;
   int letter_idx;
   int len = strlen(token);
 
+  //演算子テーブルの一覧走査
   for(op_idx = 0; op_idx < (sizeof(st_operator_table)
     / sizeof(OperatorInfo)); op_idx++){
+	
+	//複数文字の演算子の文字列走査(=!とか==)
     for(letter_idx = 0; letter_idx < len &&
       st_operator_table[op_idx].token[letter_idx]!='\0';
       letter_idx++){
+		
+      //一致していなければ次の演算子を評価しに行く(*1)
       if(token[letter_idx]
         != st_operator_table[op_idx].token[letter_idx]){
           break;
       }
     }
+    
+    //最後に評価したところが一致してればTrue
+    //(*1)のところでbreakしても、絶対ここは通らない。
     if(token[letter_idx]=='\0' &&
     st_operator_table[op_idx].token[letter_idx]==letter){
       return 1;
@@ -136,27 +145,46 @@ int is_keyword(char *token, TokenKind *kind){
   return 0;
 }
 
+/**
+*	ここがparserから呼ばれる。
+*	if(a==b){
+*	だと
+*	[if] [(] [a] [==] [b] [{]
+*	がトークンとなり、lex_get_tokenが呼ばれるたびにひとつづつ返す。
+*/
 Token lex_get_token(void){
   Token ret;
   LexerState state = INITIAL_STATE;
   char token[256];
   int ch;
     
-  token[0] = '\0';
+  token[0] = '\0';	//とりあえず0文字の文字列
   while ((ch = getc(st_source_file)) != EOF){
     switch (state){
+		
+	//まずはここが動く。改行があった場合もリセットとみなす。
     case INITIAL_STATE:
       if(isdigit(ch)){  // 数字？
         add_letter(token, ch);
         state = INT_VALUE_STATE;
-      }else if(isalpha(ch) || ch == '_'){ // 英文字？ _？
+      }else if(isalpha(ch) || ch == '_'){
+
+		// 英文字？ _？
+		//変数名やifなんかは数字から始まっちゃ駄目ってことだね。
+		//あと演算子で使う文字も使えない
         add_letter(token, ch);
         state = IDENTIFIER_STATE;
+
       }else if(ch == '\"'){ // 文字列？
         state = STRING_STATE;
       }else if(in_operator(token, ch)){ // 演算子？
+      
+        //此処一見簡単だけど、==とか=!とかはどう見てるの？って思った。
+        //だけど、2文字使う演算子も、演算子で使う文字列で表現されてるから
+        //ここを通るんだ。「= - + * !」なんかで造られてるものね。[== =- =+]とかね。
         add_letter(token, ch);
         state = OPERATOR_STATE;
+
       }else if(isspace(ch)){ // 空白？
         if(ch == '\n'){ // 改行？
           st_current_line_number++;
@@ -167,6 +195,7 @@ Token lex_get_token(void){
         lex_error("bad character", ch); // エラー
       }
       break;
+      
     case INT_VALUE_STATE:
       if (isdigit(ch)) {
         add_letter(token, ch);
@@ -177,10 +206,20 @@ Token lex_get_token(void){
         goto LOOP_END;
       }
       break;
+      
+      
+      
+    //[a-z] _ が来た時の処理。
     case IDENTIFIER_STATE:
-      if(isalpha(ch) || ch == '_' || isdigit(ch)){
+      //変数やifなどの2文字目以降は数字がはいってもOKってことか。
+      if(isalpha(ch) || ch == '_' || isdigit(ch)){	
         add_letter(token, ch);
       }else{
+
+        //空白とか(だった場合、トークンの終了ってこと。
+        //積み上げてたトークン文字列を含む構造体をreturnで返す。
+        //あと、読んでしまった文字分、1バイトファイルの読み込みポインタの位置を戻す
+
         ret.u.identifier = token;
         ungetc(ch, st_source_file);
         goto LOOP_END;
@@ -203,6 +242,8 @@ Token lex_get_token(void){
         goto LOOP_END;
       }
       break;
+      
+    //改行があるまでずーっとCOMMENT_STATE
     case COMMENT_STATE:
       if (ch == '\n') {
         state = INITIAL_STATE;

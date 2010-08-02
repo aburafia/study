@@ -46,6 +46,11 @@ static Token get_token(void){
   return ret;
 }
 
+/**
+ *トークンを一つ戻す。っていうか戻したトークンっていう置き場をつくってそこに格納。
+ *トークンを取得する関数は置き場にあれば置き場から、そうでなければちゃんと取得し直す
+ *みたいな処理
+ */
 static void unget_token(Token token){
   st_look_ahead_token = token;
   st_look_ahead_token_exists = 1;
@@ -70,15 +75,22 @@ static void check_expected_token(TokenKind expected){
   }
 }
 
+/**
+ * 登録した変数管理配列から、名称で変数を探す
+ */
 static int search_var(char *identifier){
   int i;
   for (i = 0; i < st_var_table_size; i++) {
-    if (!strcmp(identifier, st_var_table[i]))
+    if (!strcmp(identifier, st_var_table[i])) //strcmpは一致すると0。ってことで一致するとここが通る
       return i;
   }
   return -1;
 }
 
+/**
+ * 登録した変数管理配列から変数を探す。
+ * 無い場合は登録する
+ */
 static int search_or_new_var(char *identifier){
   int ret;
   ret = search_var(identifier);
@@ -91,6 +103,11 @@ static int search_or_new_var(char *identifier){
 
 static void parse_expression(void);
 
+/**
+ * 一番優先度の高い演算処理。
+ * 文字、数値や、変数など
+ * あとは（がある場合は再度式の評価を最低優先度から評価して行く(parse_expression）。
+ */
 static void parse_primary_expression(void){
   Token token;
 
@@ -101,13 +118,15 @@ static void parse_primary_expression(void){
     add_bytecode((int)OP_PUSH_INT);
     add_bytecode(token.u.int_value);
   } else if (token.kind == STRING_LITERAL_TOKEN) {
+
+    //文字列は別途配列にて管理　　　
     add_bytecode((int)OP_PUSH_STRING);
     g_str_pool[g_str_pool_size] = token.u.string;
     add_bytecode(g_str_pool_size);
     g_str_pool_size++;
   } else if (token.kind == LEFT_PAREN_TOKEN) {
     parse_expression();
-    check_expected_token(RIGHT_PAREN_TOKEN);
+    check_expected_token(RIGHT_PAREN_TOKEN); //)で終わるか確認
   } else if (token.kind == IDENTIFIER_TOKEN) {
     int var_idx = search_var(token.u.identifier);
     if (var_idx < 0) {
@@ -118,6 +137,12 @@ static void parse_primary_expression(void){
   }
 }
 
+/**
+ * マイナス値だった場合の処理。
+ * より高い優先度の演算を行った後に
+ * 多分-1を掛けるとか言う
+ * バイトコード入れるんだと思う
+ */
 static void parse_unary_expression(void){
 
 	lg("parse_unary_expressio");
@@ -133,6 +158,11 @@ static void parse_unary_expression(void){
   }
 }
 
+/**
+ *乗算所算計処理
+ *その前により高い演算の処理へJUMP
+ *
+ */
 static void parse_multiplicative_expression(void){
 
 	lg("parse_multiplicative_expressio");
@@ -146,7 +176,7 @@ static void parse_multiplicative_expression(void){
       unget_token(token);
       break;
     }
-    parse_unary_expression();
+    parse_unary_expression();  //マイナス値かもしれないから、その処理
     if (token.kind == MUL_TOKEN) {
       add_bytecode((int)OP_MUL);
     } else {
@@ -155,6 +185,11 @@ static void parse_multiplicative_expression(void){
   }
 }
 
+/**
+ *たすひく系処理
+ *その前により優先度の高い演算処理へJUMPする
+ *
+ */
 static void parse_additive_expression(void){
 
 	lg("parse_additive_expressio");
@@ -168,7 +203,7 @@ static void parse_additive_expression(void){
       unget_token(token);
       break;
     }
-    parse_multiplicative_expression();
+    parse_multiplicative_expression(); //マイナス値かもしれないから、その処理
     if (token.kind == ADD_TOKEN) {
       add_bytecode((int)OP_ADD);
     } else {
@@ -177,6 +212,14 @@ static void parse_additive_expression(void){
   }
 }
 
+/**
+ *比較系演算の処理部分
+ *でも比較系演算の処理のまえに、足す引くの処理を行う。
+ *つまりタス引くの演算子の優先度が低いってこと
+ *
+ *比較系演算子でなければ取得したトークンを戻して
+ *比較系ならば、対応したバイトコードを出力して終わり
+ */
 static void parse_compare_expression(void){
 
 	lg("parse_compare_expressio");
@@ -211,6 +254,13 @@ static void parse_compare_expression(void){
   }
 }
 
+/**
+ *式の評価の関数ここからは関数の串刺し。
+ *だけど、それは演算の評価順序を構築するため
+ *まずは比較系演算処理へJUMP.
+ *んで比較系を見る前にもっと優先度のたかい演算子の処理へJUMPするから
+ *結局優先度が一番低い処理っていう。
+ */
 static void parse_expression(void){
   parse_compare_expression();
 }
@@ -239,6 +289,10 @@ static int search_or_new_label(char *label){
   return st_label_table_size++;
 }
 
+/**
+ *ifってトークンがきたら呼ばれる
+ *
+ */
 static void parse_if_statement(void){
 
 	lg("parse_if_statemen");
@@ -247,9 +301,9 @@ static void parse_if_statement(void){
   int else_label;
   int end_if_label;
 
-  check_expected_token(LEFT_PAREN_TOKEN);
-  parse_expression();
-  check_expected_token(RIGHT_PAREN_TOKEN);
+  check_expected_token(LEFT_PAREN_TOKEN); //  (かどうか
+  parse_expression(); //式
+  check_expected_token(RIGHT_PAREN_TOKEN); // )かどうか
 
   else_label = get_label();
   add_bytecode((int)OP_JUMP_IF_ZERO);
@@ -376,6 +430,10 @@ static void parse_return_statement(void){
   check_expected_token(SEMICOLON_TOKEN);
 }
 
+/**
+ *一番最初の評価関数
+ *
+ */
 static void parse_statement(void){
   Token token;
   token = get_token();
@@ -458,6 +516,9 @@ static void fix_labels(void){
   }
 }
 
+/**
+ *ここがパーサーの入り口
+ */
 static void parse(void){
   Token token;
 

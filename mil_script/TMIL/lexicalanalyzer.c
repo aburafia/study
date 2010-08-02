@@ -26,6 +26,8 @@ static void lex_error(char *message, int ch){
   exit(1);
 }
 
+//tokenに貯められた文字列を
+//別途メモリを確保＆文字列管理配列に登録
 static char* my_strdup(char *src){
   char *dest = malloc(strlen(src) + 1);
   g_string_pointer_pool[g_string_pointer_pool_size++]
@@ -75,6 +77,13 @@ static OperatorInfo st_operator_table[] = {
 };
 
 
+/**
+*	演算子かどうかを調査する。
+*	ちょっと分かりにくいけど、文字列が==とかの場合、
+*	=でまずture ASSIGN_TOKEN
+*	==でtrue	EQ_TOKEN
+*	って感じで評価される
+*/
 int in_operator(char *token, int letter){
   int op_idx;
   int letter_idx;
@@ -106,6 +115,9 @@ int in_operator(char *token, int letter){
   return 0;
 }
 
+/**
+*	演算子テーブルでtokenの内容で検索し、演算子種別を取得する
+*/
 TokenKind select_operator(char *token){
   int i;
   for(i = 0; i < sizeof(st_operator_table)
@@ -133,6 +145,9 @@ KeywordInfo st_keyword_table[] = {
   {"print", PRINT_TOKEN},
 };
 
+/**
+*	tokenが予約語にあるかどうか。
+*/
 int is_keyword(char *token, TokenKind *kind){
   int i;
   for(i = 0; i < sizeof(st_keyword_table)
@@ -197,18 +212,18 @@ Token lex_get_token(void){
       break;
       
     case INT_VALUE_STATE:
+    
+      //数値として収めましょ
       if (isdigit(ch)) {
         add_letter(token, ch);
       } else {
         ret.kind = INT_VALUE_TOKEN;
-        sscanf(token, "%d", &ret.u.int_value);
+        sscanf(token, "%d", &ret.u.int_value);	//文字->数値
         ungetc(ch, st_source_file);
         goto LOOP_END;
       }
       break;
-      
-      
-      
+
     //[a-z] _ が来た時の処理。
     case IDENTIFIER_STATE:
       //変数やifなどの2文字目以降は数字がはいってもOKってことか。
@@ -226,15 +241,18 @@ Token lex_get_token(void){
       }
       break;
     case STRING_STATE:
-      if (ch == '\"') {
+      if (ch == '\"') {	//終わりの["]
         ret.kind = STRING_LITERAL_TOKEN;
-        ret.u.string = my_strdup(token);
+        ret.u.string = my_strdup(token);	//tokenの中身を文字列にしてた戻りのアドレス
         goto LOOP_END;
       } else {
         add_letter(token, ch);
       }
       break;
     case OPERATOR_STATE:
+    
+      //演算子文字列が続く限りin_operatorで評価して、
+      //違うもの（空白とか）が来ら1文字戻して終了
       if (in_operator(token, ch)) {
         add_letter(token, ch);
       } else {

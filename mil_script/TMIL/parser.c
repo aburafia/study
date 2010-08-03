@@ -353,6 +353,10 @@ static void parse_if_statement(void){
   }
 }
 
+/**
+*	whileの時の処理
+*
+*/
 static void parse_while_statement(void){
 
 	lg("parse_while_statemen");
@@ -566,6 +570,13 @@ static void parse(void){
   }
 }
 
+/**
+*============================
+*============================
+*ここが言語しょりのmain
+*============================
+*============================
+*/
 int main(int argc, char **argv){
   FILE *src_fp;
   int c = 0;

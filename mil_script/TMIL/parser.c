@@ -31,22 +31,22 @@ static int st_look_ahead_token_exists;	//押し戻されたトークンが在る
 static Token get_token(void){
   Token ret;
 
-	char dbg[100];
+  //	char dbg[100];
 
   if (st_look_ahead_token_exists) {
     ret = st_look_ahead_token;
     st_look_ahead_token_exists = 0;
 
-	sprintf(dbg, "gettoken/exist kind=%d", ret.kind);
+    //	sprintf(dbg, "gettoken/exist kind=%d", ret.kind);
 
   } else {
     ret = lex_get_token();
 
-	sprintf(dbg, "gettoken kind=%d", ret.kind);
+    //	sprintf(dbg, "gettoken kind=%d", ret.kind);
 
   }
 
-  lg(dbg);
+  //lg(dbg);
 
   return ret;
 }
@@ -61,6 +61,10 @@ static void unget_token(Token token){
   st_look_ahead_token_exists = 1;
 }
 
+
+/**
+ *バイトコードへ登録
+ */
 static void add_bytecode(int bytecode){
   g_bytecode[g_bytecode_size] = bytecode;
   g_bytecode_size++;
@@ -124,12 +128,16 @@ static void parse_primary_expression(void){
   token = get_token();
   if (token.kind == INT_VALUE_TOKEN) {
 	
+    lg("数値出力");
+
 	//数値出力というバイトコード
     add_bytecode((int)OP_PUSH_INT);
     //実際の数値
     add_bytecode(token.u.int_value);
 
   } else if (token.kind == STRING_LITERAL_TOKEN) {
+
+    lg("文字列出力");
 
 	//文字列出力というバイトコード
     add_bytecode((int)OP_PUSH_STRING);
@@ -141,12 +149,18 @@ static void parse_primary_expression(void){
 
   } else if (token.kind == LEFT_PAREN_TOKEN) {
 
+    lg("( 式開始");
+
 	//(のばあい、式の評価
     parse_expression();
     //)で終わるか確認
+
+    lg(") で終了のはず");
     check_expected_token(RIGHT_PAREN_TOKEN);
 
   } else if (token.kind == IDENTIFIER_TOKEN) {
+
+    lg("変数");
 
 	//変数リストにあるか？
     int var_idx = search_var(token.u.identifier);
@@ -331,24 +345,71 @@ static void parse_if_statement(void){
   int else_label;
   int end_if_label;
 
+  lg("(");
+
   check_expected_token(LEFT_PAREN_TOKEN); //  (かどうか
+
+  lg("式の評価");
+
   parse_expression(); //式
+
+  lg(")");
+
   check_expected_token(RIGHT_PAREN_TOKEN); // )かどうか
 
   else_label = get_label();
+
+  char dbg[100];
+
+
+  //  sprintf(dbg, "gettoken kind=%d", );
+
+
+  sprintf(dbg,"if : OP_JUMP_IF_ZERO/%d",else_label);
+  lg(dbg);
+
   add_bytecode((int)OP_JUMP_IF_ZERO);
   add_bytecode(else_label);
+
+  lg("{ start");
+
   parse_block();
+
+  lg("} end");
+
   token = get_token();
-  if (token.kind == ELSE_TOKEN) { 
+  if (token.kind == ELSE_TOKEN) {
+ 
     end_if_label = get_label();
     add_bytecode((int)OP_JUMP);
     add_bytecode(end_if_label);
+
+
+    sprintf(dbg,"else : OP_JUMP[%d]",end_if_label);
+    lg(dbg);
+
+    sprintf(dbg,"       set_label[%d]",else_label);
+    lg(dbg);
+
     set_label(else_label);
+
+    lg("{ start");
+      
     parse_block();
+
+    lg("} end");
+
+    sprintf(dbg,"       set_label[%d]",end_if_label);
+    lg(dbg);
+    
     set_label(end_if_label);
   } else {
     unget_token(token);
+
+    lg("osimodosi");
+    sprintf(dbg,"set_label[%d]",else_label);
+    lg(dbg);
+   
     set_label(else_label);
   }
 }
@@ -391,6 +452,11 @@ static void parse_print_statement(void){
   check_expected_token(SEMICOLON_TOKEN);
 }
 
+/**
+ * 代入処理。
+ * 変数がきたとき（identifier_token）に呼ばれる
+ * 変数「だけ」がきたら代入のはず。変数があるのは式の中だから単体では代入だけだ
+ */
 static void parse_assign_statement(char *identifier){
 
 	lg("parse_assign_statemen");
@@ -399,8 +465,8 @@ static void parse_assign_statement(char *identifier){
 
   //たしかにこの次は代入演算子だよね
   check_expected_token(ASSIGN_TOKEN);
-  parse_expression();
-  add_bytecode((int)OP_ASSIGN_TO_VAR);
+  parse_expression(); //代入する右辺を評価
+  add_bytecode((int)OP_ASSIGN_TO_VAR); 
   add_bytecode(var_idx);
   check_expected_token(SEMICOLON_TOKEN);
 }
@@ -594,7 +660,13 @@ int main(int argc, char **argv){
   lex_initialize(src_fp);
 
   parse();
+
+  dpr(); //でバッグプリント
+
   fix_labels();
+
+  //dpr();
+
   mvm_execute();
 
   while(g_string_pointer_pool[c] != 0){
@@ -609,3 +681,36 @@ int lg(char *c){
   return 0;
 }
 
+int dpr(void){
+
+  int i;
+
+  fprintf(stderr, "====bytecode====\n");
+
+  for(i=0; i<g_bytecode_size;i++){
+    fprintf(stderr,"biytecode[%d]%d\n", i, (int)g_bytecode[i]);
+  }
+
+  fprintf(stderr, "====g_str_pool=====\n");
+
+  for(i=0; i<g_str_pool_size;i++){
+    fprintf(stderr,"str_pool[%d]%s\n", i, g_str_pool[i]);
+  }
+
+  fprintf(stderr, "====st_var_table=====\n");
+
+  for(i=0; i<st_var_table_size;i++){
+    fprintf(stderr,"st_var[%d]%s\n", i, st_var_table[i]);
+  }
+
+  fprintf(stderr, "====st_label_table=====\n");
+
+  for(i=0; i<st_label_table_size;i++){
+    fprintf(stderr,"label[%d]%s:address=%d\n", i, st_label_table[i].identifier, st_label_table[i].address);
+  }
+
+  fprintf(stderr, "==============\n");
+
+
+  return 0;
+}

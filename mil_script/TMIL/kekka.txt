@@ -1,0 +1,81 @@
+dbg:評価はじめ
+dbg:IDENTIFIER_TOKEN
+dbg:parse_assign_statemen
+dbg:parse_compare_expressio
+dbg:parse_additive_expressio
+dbg:parse_multiplicative_expressio
+dbg:parse_unary_expressio
+dbg:parse_primary_expressio
+dbg:数値出力
+dbg:評価はじめ
+dbg:IF_TOKEN
+dbg:parse_if_statemen
+dbg:(
+dbg:式の評価
+dbg:parse_compare_expressio
+dbg:parse_additive_expressio
+dbg:parse_multiplicative_expressio
+dbg:parse_unary_expressio
+dbg:parse_primary_expressio
+dbg:変数
+dbg:parse_additive_expressio
+dbg:parse_multiplicative_expressio
+dbg:parse_unary_expressio
+dbg:parse_primary_expressio
+dbg:数値出力
+dbg:)
+dbg:if : OP_JUMP_IF_ZERO/0
+dbg:{ start
+dbg:PRINT_TOKEN
+dbg:parse_print_statemen
+dbg:parse_compare_expressio
+dbg:parse_additive_expressio
+dbg:parse_multiplicative_expressio
+dbg:parse_unary_expressio
+dbg:parse_primary_expressio
+dbg:文字列出力
+dbg:} end
+dbg:else : OP_JUMP[1]
+dbg:       set_label[0]
+dbg:{ start
+dbg:PRINT_TOKEN
+dbg:parse_print_statemen
+dbg:parse_compare_expressio
+dbg:parse_additive_expressio
+dbg:parse_multiplicative_expressio
+dbg:parse_unary_expressio
+dbg:parse_primary_expressio
+dbg:文字列出力
+dbg:} end
+dbg:       set_label[1]
+dbg:評価はじめ
+====bytecode====
+biytecode[0]0
+biytecode[1]100
+biytecode[2]14
+biytecode[3]0
+biytecode[4]13
+biytecode[5]0
+biytecode[6]0
+biytecode[7]100
+biytecode[8]9
+biytecode[9]16
+biytecode[10]0
+biytecode[11]1
+biytecode[12]0
+biytecode[13]19
+biytecode[14]15
+biytecode[15]1
+biytecode[16]1
+biytecode[17]1
+biytecode[18]19
+====g_str_pool=====
+str_pool[0]aaa
+str_pool[1]bbb
+====st_var_table=====
+st_var[0]a
+====st_label_table=====
+label[0](null):address=16
+label[1](null):address=19
+==============
+bbb

@@ -10,8 +10,8 @@ int g_bytecode_size = 0;
 char *g_str_pool[4096];
 int g_str_pool_size = 0;
 
-static char *st_var_table[VAR_MAX];
-static int st_var_table_size = 0;
+static char *st_var_table[VAR_MAX];	//変数テーブル
+static int st_var_table_size = 0;	//変数テーブルカウント
 
 typedef struct {
   char *identifier;
@@ -20,9 +20,14 @@ typedef struct {
 static Label st_label_table[65536];
 static int st_label_table_size = 0;
 
-static Token st_look_ahead_token;
-static int st_look_ahead_token_exists;
+static Token st_look_ahead_token;	//押し戻されたトークン置き場
+static int st_look_ahead_token_exists;	//押し戻されたトークンが在るかどうかflg
 
+/**
+ *トークンの取得。
+ *あれば押し戻したトークンを、なければ新規でトークンを返す
+ *
+ */
 static Token get_token(void){
   Token ret;
 
@@ -68,8 +73,11 @@ static void parse_error(char *message){
   exit(1);
 }
 
+/*
+ *次に取得するトークンが指定されたトークンと違う種類の場合エラー
+ */
 static void check_expected_token(TokenKind expected){
-  Token token = get_token();
+  Token token = get_token();	//トークン取得
   if (token.kind != expected) {
     parse_error("parse error");
   }
@@ -115,25 +123,42 @@ static void parse_primary_expression(void){
 
   token = get_token();
   if (token.kind == INT_VALUE_TOKEN) {
+	
+	//数値出力というバイトコード
     add_bytecode((int)OP_PUSH_INT);
+    //実際の数値
     add_bytecode(token.u.int_value);
+
   } else if (token.kind == STRING_LITERAL_TOKEN) {
 
-    //文字列は別途配列にて管理　　　
+	//文字列出力というバイトコード
     add_bytecode((int)OP_PUSH_STRING);
+
+    //文字列は別途配列にて管理して、配列のアドレスをバイトコードへ
     g_str_pool[g_str_pool_size] = token.u.string;
     add_bytecode(g_str_pool_size);
     g_str_pool_size++;
+
   } else if (token.kind == LEFT_PAREN_TOKEN) {
+
+	//(のばあい、式の評価
     parse_expression();
-    check_expected_token(RIGHT_PAREN_TOKEN); //)で終わるか確認
+    //)で終わるか確認
+    check_expected_token(RIGHT_PAREN_TOKEN);
+
   } else if (token.kind == IDENTIFIER_TOKEN) {
+
+	//変数リストにあるか？
     int var_idx = search_var(token.u.identifier);
     if (var_idx < 0) {
       parse_error("identifier not found.");
     }
+    
+    //変数出力というバイトコード
     add_bytecode((int)OP_PUSH_VAR);
+    //変数の管理配列のアドレスをバイトコード出力
     add_bytecode(var_idx);
+
   }
 }
 
@@ -150,9 +175,12 @@ static void parse_unary_expression(void){
   Token token;
   token = get_token();
   if (token.kind == SUB_TOKEN) {
+	//優先度の高い演算処理をして
     parse_primary_expression();
+    //マイナス化のバイトコード
     add_bytecode((int)OP_MINUS);
   } else {
+	//押し戻して優先度の高い演算処理へ
     unget_token(token);
     parse_primary_expression();
   }
@@ -168,7 +196,7 @@ static void parse_multiplicative_expression(void){
 	lg("parse_multiplicative_expressio");
 
   Token token;
-  parse_unary_expression();
+  parse_unary_expression();	//左辺？
   for (;;) {
     token = get_token();
     if (token.kind != MUL_TOKEN
@@ -176,7 +204,7 @@ static void parse_multiplicative_expression(void){
       unget_token(token);
       break;
     }
-    parse_unary_expression();  //マイナス値かもしれないから、その処理
+    parse_unary_expression();  //右辺を評価
     if (token.kind == MUL_TOKEN) {
       add_bytecode((int)OP_MUL);
     } else {
@@ -195,7 +223,7 @@ static void parse_additive_expression(void){
 	lg("parse_additive_expressio");
 
   Token token;
-  parse_multiplicative_expression();
+  parse_multiplicative_expression();	//左辺？
   for (;;) {
     token = get_token();
     if (token.kind != ADD_TOKEN
@@ -203,7 +231,7 @@ static void parse_additive_expression(void){
       unget_token(token);
       break;
     }
-    parse_multiplicative_expression(); //マイナス値かもしれないから、その処理
+    parse_multiplicative_expression(); //右辺を評価？
     if (token.kind == ADD_TOKEN) {
       add_bytecode((int)OP_ADD);
     } else {
@@ -225,7 +253,7 @@ static void parse_compare_expression(void){
 	lg("parse_compare_expressio");
 
   Token token;
-  parse_additive_expression();
+  parse_additive_expression();	//ここが左辺？
   for (;;) {
     token = get_token();
     if (token.kind != EQ_TOKEN
@@ -237,7 +265,9 @@ static void parse_compare_expression(void){
       unget_token(token);
       break;
     }
-    parse_additive_expression();
+    parse_additive_expression();	//右辺を評価？
+    
+    //左辺と右辺を評価後、比較演算のバイトコード登録
     if (token.kind == EQ_TOKEN) {
       add_bytecode((int)OP_EQ);
     } else if (token.kind == NE_TOKEN) {
@@ -421,6 +451,7 @@ static void parse_label_statement(void){
   label = search_or_new_label(token.u.identifier);
   set_label(label);
 }
+
 
 static void parse_return_statement(void){
 

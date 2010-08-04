@@ -1,12 +1,10 @@
 
 a  = 100;
 
-print((a/10) + 80);
-
-#if( ((a/10) + 80) > 100){
-#  print("1111");
-#}else{
-#  print("2222");
-#}
+if( a > 100){
+  print("aaa");
+}else{
+  print("bbb");
+}
 
 

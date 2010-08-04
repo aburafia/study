@@ -268,33 +268,27 @@ int exeprint(void){
 
   int i;
 
-  fprintf(stderr, "========\n");
-
-  fprintf(stderr, "pc:%d bytecode:%d\n",pc, g_bytecode[pc]);
-
-
-  fprintf(stderr, "  ---->sta\n");
+  fprintf(stderr, "<--------\n");
+  fprintf(stderr, "sta\n");
 
   //スタックの出力
   for(i = 0; i < sizeof(st_stack) / sizeof(Value); i++){
 	
 	if(st_stack[i].type == INT_VALUE_TYPE){
-		fprintf(stderr, "  int type:%d\n", st_stack[i].u.int_value);
+		fprintf(stderr, "   int type:%d\n", st_stack[i].u.int_value);
 	}else{
-		fprintf(stderr, "  str type:%s\n", st_stack[i].u.string_value);
+		fprintf(stderr, "   str type:%s\n", st_stack[i].u.string_value);
 	}
   }
 
-  fprintf(stderr, " ---->st_variable\n");
+  fprintf(stderr, "st_variable\n");
 
   //バリアぶるの出力
   for(i = 0; i < sizeof(st_variable) / sizeof(Value); i++){
-
-	fprintf(stderr, "  type:%d intval:%d strval:%s\n", st_variable[i].type, st_variable[i].u.int_value, st_variable[i].u.string_value);
+	fprintf(stderr, "   type:%d intval:%d strval:%s\n", st_variable[i].type, st_variable[i].u.int_value, st_variable[i].u.string_value);
   }
 
-  fprintf(stderr, "========\n");
-
+  fprintf(stderr, "-------->\n");
 
   return 0;
 }
